@@ -16,31 +16,24 @@ create table if not exists products (
 );
 
 -- 3. Security: Enable Row Level Security (RLS)
--- We want the Flutter app to be able to READ the catalog without user login for the POC.
 alter table products enable row level security;
 
 create policy "Products are viewable by everyone."
     on products for select
     using ( true );
 
--- 4. Seed Data: Insert our Penpot Wireframe examples so we have something to test
+-- 4. Seed Data: Updated with your custom product images
 insert into products (name, category, description, dimensions, color, thumbnail_url, ai_tags)
 values
 (
-    'Granite Paver',
-    'Hardscape',
-    'Non-slip texture, perfect for pathways.',
-    '60x60 cm',
-    'Slate Grey',
-    'https://via.placeholder.com/150/E8F5E9/4CAF50?text=Paver',
-    array['modern', 'pathway', 'stone']
+    'Premium Garden Tile', 'Hardscape', 'High-quality outdoor surface material for modern patios.', 'Custom Area', 'Natural Stone',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJwr3A_fGx0JNMvzeXQbZV4ViBZXTsxCTyeQ&s', array['tile', 'patio', 'stone']
 ),
 (
-    'Japanese Maple',
-    'Plant',
-    'Prefers partial shade, moderate watering.',
-    '1.5m height',
-    'Crimson Red',
-    'https://via.placeholder.com/150/E8F5E9/4CAF50?text=Maple',
-    array['zen', 'tree', 'shade']
+    'Tall Wooden Planter', 'Decor', 'Elegant vertical planter for outdoor accenting.', 'Large', 'Warm Wood',
+    'https://static.wixstatic.com/media/5ef4ca_4f4204662a874ffab67ba2a416024c55~mv2.jpg/v1/fill/w_568,h_1004,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/5ef4ca_4f4204662a874ffab67ba2a416024c55~mv2.jpg', array['planter', 'wood', 'tall']
+),
+(
+    'Rattan Garden Seating', 'Furniture', 'Comfortable grey wicker seating for relaxing in the yard.', 'Standard Set', 'Grey',
+    'https://www.coopersofstortford.co.uk/images/products/medium/XGB83i.jpg', array['furniture', 'seating', 'relax']
 );
