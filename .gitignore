@@ -1,0 +1,17 @@
+# Mac
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+
+# Python Middleware
+api/venv/
+api/__pycache__/
+
+# Flutter App
+app/build/
+app/.dart_tool/
+
+# Supabase Local
+supabase/.temp/
