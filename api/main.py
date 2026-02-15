@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import json
 import os
+from dotenv import load_dotenv
 import PIL.Image
 from io import BytesIO
 import requests
@@ -10,8 +11,17 @@ import requests
 # Import the NEW unified SDK
 from google import genai
 
+# Load variables from .env
+load_dotenv()
+
+# Fetch the key from the environment
+api_key = os.getenv("GOOGLE_API_KEY")
 # Initialize the new Client
-client = genai.Client(api_key="AIzaSyClzhf4dVGnzL8Mp4qvKfr_McD1qnKPYek")
+if not api_key:
+    raise ValueError("GOOGLE_API_KEY not found in .env file")
+
+# Initialize the Client with the secure key
+client = genai.Client(api_key=api_key)
 
 app = FastAPI(title="SunSun Garden Genie AI Middleware")
 

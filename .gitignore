@@ -15,3 +15,7 @@ app/.dart_tool/
 
 # Supabase Local
 supabase/.temp/
+
+# Secrets
+.env
+api/.env
