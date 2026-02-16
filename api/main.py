@@ -1,122 +1,133 @@
+import asyncio
+import time
+import os
+import json
+from io import BytesIO
+import PIL.Image
+from PIL import ImageFile
+import requests
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-import json
-import os
 from dotenv import load_dotenv
-import PIL.Image
-from io import BytesIO
-import requests
-
-# Import the NEW unified SDK
 from google import genai
 
-# Load variables from .env
-load_dotenv()
+# Prevent image truncation crashes
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# Fetch the key from the environment
+load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
-# Initialize the new Client
 if not api_key:
     raise ValueError("GOOGLE_API_KEY not found in .env file")
 
-# Initialize the Client with the secure key
 client = genai.Client(api_key=api_key)
+app = FastAPI(title="SunSun Garden Genie AI")
 
-app = FastAPI(title="SunSun Garden Genie AI Middleware")
-
-# Create a local folder to host the generated images for Flutter
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.post("/generate-design")
 async def generate_design(
         image: UploadFile = File(...),
-        prompt: str = Form(...),
-        selected_products: str = Form(...)
+        prompt: str = Form(default="A beautiful landscape design"),
+        selected_products: str = Form(default="[]"),
+        is_creative: str = Form(default="false")
 ):
-    print("--- NEW MULTI-IMAGE DESIGN REQUEST RECEIVED ---")
+    print(f"--- NEW ARCHITECTURAL REQUEST (3 PERSPECTIVES) ---")
 
-    # 1. Read the base yard image uploaded from Flutter
-    try:
-        image_bytes = await image.read()
-        base_yard_image = PIL.Image.open(BytesIO(image_bytes))
-    except Exception as e:
-        print(f"Image processing error: {e}")
-        return {"status": "error", "message": f"Could not read yard image: {str(e)}"}
+    # 1. Store Raw Bytes (Solves the "Silent Crash" Stream Exhaustion)
+    image_bytes = await image.read()
 
-    # 2. Parse the selected products AND download their images
-    product_images = []
+    product_bytes_list = []
     context_items = []
-    try:
-        products_list = json.loads(selected_products)
-        for i, p in enumerate(products_list):
-            # We index the products so the AI knows which image is which
-            item_num = i + 1
-            detail = f"Product Image {item_num} - {p['name']} (Color: {p['color']}): {p['description']}"
-            context_items.append(detail)
+    products_list = json.loads(selected_products)
 
-            # Download the actual thumbnail to send to the AI
-            if p.get('thumbnail_url'):
-                try:
-                    res = requests.get(p['thumbnail_url'])
-                    if res.status_code == 200:
-                        p_img = PIL.Image.open(BytesIO(res.content))
-                        product_images.append(p_img)
-                except Exception as img_err:
-                    print(f"Failed to fetch product image {p['name']}: {img_err}")
+    for p in products_list:
+        context_items.append(f"- {p['name']} (Color: {p['color']}, Size: {p['dimensions']})")
+        if p.get('thumbnail_url'):
+            try:
+                res = requests.get(p['thumbnail_url'])
+                if res.status_code == 200:
+                    product_bytes_list.append(res.content)
+            except Exception as e:
+                print(f"Failed to load image for {p['name']}: {e}")
 
-        inventory_context = "\n".join(context_items)
-    except Exception as e:
-        print(f"Error parsing products: {e}")
-        inventory_context = "No specific plants selected."
+    inventory_context = "\n".join(context_items)
 
-    # 3. Build the Multi-Image Super Prompt
-    super_prompt = (
-        f"You are a master landscape architect. Redesign the provided backyard photo exactly as requested. "
-        f"User Vision: '{prompt}'. "
-        f"CRITICAL INSTRUCTIONS: "
-        f"1. The FIRST image provided is the base yard. You must completely remove the red deck and build a new patio. "
-        f"2. The SUBSEQUENT images provided are the exact products you MUST feature in the design: \n{inventory_context}\n"
-        f"3. Do not invent generic furniture. Look directly at the provided product images and extract their exact shape, texture, and color to place them in the scene. "
-        f"Maintain the exact structural perspective of the house, the satellite dish, and the wooden fence."
-    )
-    print(f"Super Prompt: \n{super_prompt}")
+    # 2. Creative Override Logic
+    creative_flag = is_creative.lower() == "true"
+    if creative_flag:
+        creativity_rule = "CREATIVE MODE: You may add minor complementary landscape elements (small lighting, pathway stones, plants). DO NOT add large structures like tents or pools."
+    else:
+        creativity_rule = "ZERO HALLUCINATION RULE: STRICTLY FORBIDDEN from generating tents, pergolas, pools, or imaginary furniture. ONLY use the exact products provided."
 
-    try:
-        # 4. Assemble the payload: [Text Prompt, Base Yard Photo, Product 1, Product 2...]
-        api_contents = [super_prompt, base_yard_image] + product_images
+    # 3. The Generator Function
+    async def generate_single_variation(index):
+        print(f"Generating Perspective {index + 1}...")
 
-        print(f"Calling AI with {len(api_contents) - 1} total images... (Takes 5-15 seconds)")
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
-            contents=api_contents,
+        # Create fresh images for THIS specific run
+        base_yard_image = PIL.Image.open(BytesIO(image_bytes))
+        product_images = [PIL.Image.open(BytesIO(b)) for b in product_bytes_list]
+
+        # NEW: Driving 3 distinct camera angles
+        angle_instruction = [
+            "Maintain the exact original camera perspective and angle.",
+            "Render from a lower, wider ground-level perspective to showcase the depth of the yard.",
+            "Render from a slightly elevated, diagonal perspective to show the overall layout of the space."
+        ][index]
+
+        # NEW: A universal, generic prompt that analyzes ANY photo
+        super_prompt = (
+            f"You are a master 3D landscape architectural visualizer. \n"
+            f"1. ENVIRONMENT ANALYSIS: The FIRST image is the ANCHOR PHOTO. Analyze this space to understand the architectural style, lighting, and permanent boundary structures (walls, fences, buildings).\n"
+            f"2. PERSPECTIVE SHIFT: {angle_instruction} You must preserve the general architectural style and vibe of the original space, even if the angle changes.\n"
+            f"3. REDESIGN: Identify the primary ground space (e.g., existing grass, dirt, or paving). Replace this entire ground area with a new layout matching this vision: '{prompt}'.\n"
+            f"4. MANDATORY INVENTORY: You MUST include EVERY product provided in the reference images. Scale them correctly to the new perspective.\n"
+            f"5. {creativity_rule}\n"
+            f"6. QUANTITIES: Suggest exact quantities for these items based on the visual scale: \n{inventory_context}\n"
         )
 
-        output_filename = "latest_design.jpg"
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.5-flash-image",
+            contents=[super_prompt, base_yard_image] + product_images
+        )
+
+        output_filename = f"design_var_{index}_{int(time.time())}.jpg"
         output_path = f"static/{output_filename}"
+        summary_text = ""
 
-        # 5. Extract and save the result
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
-                img_out = PIL.Image.open(BytesIO(part.inline_data.data))
-                img_out.save(output_path)
-                print(f"Image saved successfully to {output_path}")
-                break
+        if response.candidates:
+            for part in response.candidates[0].content.parts:
+                if part.text:
+                    summary_text += part.text + "\n"
+                if part.inline_data:
+                    img = PIL.Image.open(BytesIO(part.inline_data.data))
+                    img.save(output_path)
 
-        # 6. Return the URL to Flutter
+        url = f"http://10.0.2.2:8000/{output_path}"
+        return url, summary_text.strip()
+
+    try:
+        # 4. Run Sequentially
+        results = []
+        for i in range(3):
+            res = await generate_single_variation(i)
+            results.append(res)
+
+        image_urls = [res[0] for res in results]
+        final_summary = results[0][1] if results[0][1] else "Design completed. Swipe left/right to view different perspectives."
+
+        print("--- ALL 3 PERSPECTIVES COMPLETED SUCCESSFULLY ---")
         return {
             "status": "success",
-            "message": "Design generated successfully.",
-            "result_image_url": f"http://10.0.2.2:8000/static/{output_filename}?v=2"
+            "result_image_urls": image_urls,
+            "summary": final_summary
         }
-
     except Exception as e:
-        print(f"AI Generation Error: {e}")
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        error_msg = repr(e)
+        print(f"API Error: {error_msg}")
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

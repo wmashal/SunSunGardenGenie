@@ -16,6 +16,8 @@ app/.dart_tool/
 # Supabase Local
 supabase/.temp/
 
-# Secrets
+# Ignore all .env files everywhere
 .env
+*.env
 api/.env
+app/.env
