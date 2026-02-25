@@ -8,6 +8,7 @@ from PIL import ImageFile
 import requests
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
 from google import genai
@@ -23,8 +24,18 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 app = FastAPI(title="SunSun Garden Genie AI")
 
+# Enable CORS for mobile app access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.post("/generate-design")
 async def generate_design(
@@ -33,67 +44,139 @@ async def generate_design(
         selected_products: str = Form(default="[]"),
         is_creative: str = Form(default="false")
 ):
-    print(f"--- NEW ARCHITECTURAL REQUEST (3 PERSPECTIVES) ---")
+    print(f"\n{'='*60}")
+    print(f"NEW DESIGN REQUEST")
+    print(f"{'='*60}")
 
-    # 1. Store Raw Bytes (Solves the "Silent Crash" Stream Exhaustion)
+    # 1. Store Raw Bytes
     image_bytes = await image.read()
+    print(f"Received yard image: {len(image_bytes)} bytes")
 
+    # 2. Parse products and fetch their images
     product_bytes_list = []
-    context_items = []
+    product_names = []
     products_list = json.loads(selected_products)
 
+    # Browser-like headers to avoid 406 errors
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://sunsun.co.il/',
+    }
+
+    print(f"Selected products: {len(products_list)}")
+
     for p in products_list:
-        context_items.append(f"- {p['name']} (Color: {p['color']}, Size: {p['dimensions']})")
-        if p.get('thumbnail_url'):
+        product_name = p.get('name', 'Unknown')
+        product_names.append(product_name)
+        print(f"  - {product_name}")
+
+        thumbnail_url = p.get('thumbnail_url')
+        if thumbnail_url:
             try:
-                res = requests.get(p['thumbnail_url'])
+                print(f"    Fetching image from: {thumbnail_url}")
+                res = requests.get(thumbnail_url, headers=headers, timeout=15)
                 if res.status_code == 200:
                     product_bytes_list.append(res.content)
+                    print(f"    SUCCESS: {len(res.content)} bytes")
+                else:
+                    print(f"    FAILED: HTTP {res.status_code}")
             except Exception as e:
-                print(f"Failed to load image for {p['name']}: {e}")
+                print(f"    FAILED: {e}")
 
-    inventory_context = "\n".join(context_items)
+    print(f"Successfully loaded {len(product_bytes_list)}/{len(products_list)} product images")
 
-    # 2. Creative Override Logic
+    # 3. Build product inventory text
+    inventory_lines = []
+    for i, p in enumerate(products_list):
+        line = f"PRODUCT {i+1}: {p.get('name', 'Unknown')}"
+        if p.get('color'):
+            line += f" | Color: {p.get('color')}"
+        if p.get('dimensions'):
+            line += f" | Size: {p.get('dimensions')}"
+        inventory_lines.append(line)
+
+    inventory_text = "\n".join(inventory_lines)
+
+    # 4. Creative mode rules
     creative_flag = is_creative.lower() == "true"
+    print(f"Creative mode: {creative_flag}")
+
     if creative_flag:
-        creativity_rule = "CREATIVE MODE: You may add minor complementary landscape elements (small lighting, pathway stones, plants). DO NOT add large structures like tents or pools."
+        creativity_rule = """
+CREATIVE MODE ENABLED:
+- You MAY add small complementary elements like: pathway stones, small solar lights, decorative pebbles
+- You must STILL include ALL the selected products listed above
+- DO NOT add: pools, pergolas, large furniture, structures, or items not in the product list
+"""
     else:
-        creativity_rule = "ZERO HALLUCINATION RULE: STRICTLY FORBIDDEN from generating tents, pergolas, pools, or imaginary furniture. ONLY use the exact products provided."
+        creativity_rule = """
+STRICT MODE - CRITICAL RULES:
+- ONLY place the EXACT products listed above in the design
+- DO NOT add ANY items that are not in the product list
+- DO NOT add: pools, pergolas, fountains, furniture, lights, or decorations unless they are in the product list
+- If a product type is not in the list, it should NOT appear in the output image
+- The ONLY new elements should be the selected products placed on the existing yard
+"""
 
-    # 3. The Generator Function
+    # 5. Generator function for each perspective
     async def generate_single_variation(index):
-        print(f"Generating Perspective {index + 1}...")
+        print(f"\nGenerating Perspective {index + 1}/3...")
 
-        # Create fresh images for THIS specific run
         base_yard_image = PIL.Image.open(BytesIO(image_bytes))
         product_images = [PIL.Image.open(BytesIO(b)) for b in product_bytes_list]
 
-        # NEW: Driving 3 distinct camera angles
         angle_instruction = [
-            "Maintain the exact original camera perspective and angle.",
-            "Render from a lower, wider ground-level perspective to showcase the depth of the yard.",
-            "Render from a slightly elevated, diagonal perspective to show the overall layout of the space."
+            "Keep the EXACT same camera angle and perspective as the original photo.",
+            "Show from a slightly lower, ground-level perspective.",
+            "Show from a slightly elevated bird's-eye perspective."
         ][index]
 
-        # NEW: A universal, generic prompt that analyzes ANY photo
-        super_prompt = (
-            f"You are a master 3D landscape architectural visualizer. \n"
-            f"1. ENVIRONMENT ANALYSIS: The FIRST image is the ANCHOR PHOTO. Analyze this space to understand the architectural style, lighting, and permanent boundary structures (walls, fences, buildings).\n"
-            f"2. PERSPECTIVE SHIFT: {angle_instruction} You must preserve the general architectural style and vibe of the original space, even if the angle changes.\n"
-            f"3. REDESIGN: Identify the primary ground space (e.g., existing grass, dirt, or paving). Replace this entire ground area with a new layout matching this vision: '{prompt}'.\n"
-            f"4. MANDATORY INVENTORY: You MUST include EVERY product provided in the reference images. Scale them correctly to the new perspective.\n"
-            f"5. {creativity_rule}\n"
-            f"6. QUANTITIES: Suggest exact quantities for these items based on the visual scale: \n{inventory_context}\n"
-        )
+        # Much more explicit prompt
+        super_prompt = f"""You are a photorealistic landscape designer. Your task is to modify a backyard photo.
+
+TASK: Place the selected products into this backyard photo.
+
+ORIGINAL PHOTO (Image 1): This is the backyard to modify. KEEP the same:
+- Fences, walls, and boundaries
+- House structure
+- Overall lighting and atmosphere
+- Camera angle: {angle_instruction}
+
+SELECTED PRODUCTS TO ADD (Images 2+):
+{inventory_text}
+
+The product reference images show EXACTLY what items to place. Place ONLY these items.
+
+USER'S VISION: {prompt}
+
+{creativity_rule}
+
+OUTPUT REQUIREMENTS:
+1. Generate a photorealistic image of the backyard WITH the selected products placed naturally
+2. The backyard structure (fences, house, etc.) must remain the same
+3. Products should be placed on the grass/ground area appropriately scaled
+4. Maintain realistic lighting and shadows
+
+QUANTITY ESTIMATE:
+After generating, list how many of each product you placed:
+{chr(10).join([f'- {name}: [quantity]' for name in product_names])}
+"""
+
+        # Build content list: prompt first, then yard image, then product images
+        content_list = [super_prompt, base_yard_image] + product_images
+
+        print(f"  Sending to Gemini: 1 prompt + 1 yard image + {len(product_images)} product images")
 
         response = await asyncio.to_thread(
             client.models.generate_content,
             model="gemini-2.5-flash-image",
-            contents=[super_prompt, base_yard_image] + product_images
+            contents=content_list
         )
 
-        output_filename = f"design_var_{index}_{int(time.time())}.jpg"
+        timestamp = int(time.time() * 1000)
+        output_filename = f"design_var_{index}_{timestamp}.jpg"
         output_path = f"static/{output_filename}"
         summary_text = ""
 
@@ -104,30 +187,48 @@ async def generate_design(
                 if part.inline_data:
                     img = PIL.Image.open(BytesIO(part.inline_data.data))
                     img.save(output_path)
+                    print(f"  Saved: {output_path}")
 
         url = f"http://10.0.2.2:8000/{output_path}"
         return url, summary_text.strip()
 
     try:
-        # 4. Run Sequentially
-        results = []
-        for i in range(3):
-            res = await generate_single_variation(i)
-            results.append(res)
+        # Run all 3 perspectives in parallel
+        tasks = [generate_single_variation(i) for i in range(3)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        image_urls = [res[0] for res in results]
-        final_summary = results[0][1] if results[0][1] else "Design completed. Swipe left/right to view different perspectives."
+        successful_results = []
+        for i, res in enumerate(results):
+            if isinstance(res, Exception):
+                print(f"Perspective {i + 1} FAILED: {res}")
+            else:
+                successful_results.append(res)
 
-        print("--- ALL 3 PERSPECTIVES COMPLETED SUCCESSFULLY ---")
+        if not successful_results:
+            return {"status": "error", "message": "All design generations failed"}
+
+        image_urls = [res[0] for res in successful_results]
+        all_summaries = [res[1] for res in successful_results if res[1]]
+        final_summary = all_summaries[0] if all_summaries else "Design completed successfully."
+
+        print(f"\n{'='*60}")
+        print(f"COMPLETED: {len(successful_results)}/3 perspectives generated")
+        print(f"{'='*60}\n")
+
         return {
             "status": "success",
             "result_image_urls": image_urls,
             "summary": final_summary
         }
     except Exception as e:
-        error_msg = repr(e)
-        print(f"API Error: {error_msg}")
+        print(f"API Error: {repr(e)}")
         return {"status": "error", "message": str(e)}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "SunSun Garden Genie AI"}
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
