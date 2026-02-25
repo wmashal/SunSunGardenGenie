@@ -87,38 +87,12 @@ async def generate_design(
 
     print(f"Successfully loaded {len(product_bytes_list)}/{len(products_list)} product images")
 
-    # 3. Build product inventory text
-    inventory_lines = []
-    for i, p in enumerate(products_list):
-        line = f"PRODUCT {i+1}: {p.get('name', 'Unknown')}"
-        if p.get('color'):
-            line += f" | Color: {p.get('color')}"
-        if p.get('dimensions'):
-            line += f" | Size: {p.get('dimensions')}"
-        inventory_lines.append(line)
+    # 3. Build simple product list
+    product_list_text = "\n".join([f"{i+1}. {name}" for i, name in enumerate(product_names)])
 
-    inventory_text = "\n".join(inventory_lines)
-
-    # 4. Creative mode rules
+    # 4. Creative mode
     creative_flag = is_creative.lower() == "true"
     print(f"Creative mode: {creative_flag}")
-
-    if creative_flag:
-        creativity_rule = """
-CREATIVE MODE ENABLED:
-- You MAY add small complementary elements like: pathway stones, small solar lights, decorative pebbles
-- You must STILL include ALL the selected products listed above
-- DO NOT add: pools, pergolas, large furniture, structures, or items not in the product list
-"""
-    else:
-        creativity_rule = """
-STRICT MODE - CRITICAL RULES:
-- ONLY place the EXACT products listed above in the design
-- DO NOT add ANY items that are not in the product list
-- DO NOT add: pools, pergolas, fountains, furniture, lights, or decorations unless they are in the product list
-- If a product type is not in the list, it should NOT appear in the output image
-- The ONLY new elements should be the selected products placed on the existing yard
-"""
 
     # 5. Generator function for each perspective
     async def generate_single_variation(index):
@@ -127,44 +101,39 @@ STRICT MODE - CRITICAL RULES:
         base_yard_image = PIL.Image.open(BytesIO(image_bytes))
         product_images = [PIL.Image.open(BytesIO(b)) for b in product_bytes_list]
 
-        angle_instruction = [
-            "Keep the EXACT same camera angle and perspective as the original photo.",
-            "Show from a slightly lower, ground-level perspective.",
-            "Show from a slightly elevated bird's-eye perspective."
-        ][index]
+        angle_desc = ["same angle as original", "slightly different angle", "another angle variation"][index]
 
-        # Much more explicit prompt
-        super_prompt = f"""You are a photorealistic landscape designer. Your task is to modify a backyard photo.
+        # Simple, clear prompt
+        super_prompt = f"""Look at Image 1 - this is a backyard photo. Keep this exact backyard.
 
-TASK: Place the selected products into this backyard photo.
+I have {len(product_names)} products to add (shown in the following images):
+{product_list_text}
 
-ORIGINAL PHOTO (Image 1): This is the backyard to modify. KEEP the same:
-- Fences, walls, and boundaries
-- House structure
-- Overall lighting and atmosphere
-- Camera angle: {angle_instruction}
+Instructions:
+1. Keep the EXACT same backyard from Image 1 (same fences, houses, grass, sky)
+2. Add ONLY the {len(product_names)} products shown in Images 2-{len(product_names)+1}
+3. Place them naturally on the grass
+4. Camera angle: {angle_desc}
 
-SELECTED PRODUCTS TO ADD (Images 2+):
-{inventory_text}
+IMPORTANT - TREES AND PLANTS:
+- Trees must be PLANTED DIRECTLY IN THE GROUND/SOIL
+- Do NOT show any pots, bags, containers, or nursery packaging
+- The tree trunk should emerge directly from the grass/soil with mulch or dirt around the base
+- Make it look like the tree has been professionally landscaped into the yard
+- The product image is just a reference for the tree type - ignore any pot/container shown in it
 
-The product reference images show EXACTLY what items to place. Place ONLY these items.
+STRICT RULES:
+- Do NOT add any items that are not in my product list
+- Do NOT change the backyard structure
+- Do NOT add: pools, decks, pergolas, extra furniture, decorations
+- ONLY add the exact {len(product_names)} products I selected
 
-USER'S VISION: {prompt}
+Design style: {prompt}
 
-{creativity_rule}
-
-OUTPUT REQUIREMENTS:
-1. Generate a photorealistic image of the backyard WITH the selected products placed naturally
-2. The backyard structure (fences, house, etc.) must remain the same
-3. Products should be placed on the grass/ground area appropriately scaled
-4. Maintain realistic lighting and shadows
-
-QUANTITY ESTIMATE:
-After generating, list how many of each product you placed:
-{chr(10).join([f'- {name}: [quantity]' for name in product_names])}
+After the image, list quantities used:
+{chr(10).join([f'- {name}: ___ units' for name in product_names])}
 """
 
-        # Build content list: prompt first, then yard image, then product images
         content_list = [super_prompt, base_yard_image] + product_images
 
         print(f"  Sending to Gemini: 1 prompt + 1 yard image + {len(product_images)} product images")
