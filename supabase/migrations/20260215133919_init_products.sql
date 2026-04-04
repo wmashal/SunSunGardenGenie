@@ -26,38 +26,38 @@ create policy "Products are viewable by everyone."
 insert into products (name, category, description, dimensions, color, thumbnail_url, ai_tags)
 values
 (
-    'Premium Garden Tile', 'Hardscape', 'High-quality outdoor surface material for modern patios.', 'Custom Area', 'Natural Stone',
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJwr3A_fGx0JNMvzeXQbZV4ViBZXTsxCTyeQ&s', array['tile', 'patio', 'stone']
+    'Artificial Grass Turf', 'Hardscape', 'Premium artificial grass mat for outdoor patios and garden areas. Shown with rattan furniture on top.', 'Custom Area', 'Green',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJwr3A_fGx0JNMvzeXQbZV4ViBZXTsxCTyeQ&s', array['grass', 'turf', 'artificial', 'patio']
 ),
 (
-    'Tall Wooden Planter', 'Decor', 'Elegant vertical planter for outdoor accenting.', 'Large', 'Warm Wood',
-    'https://static.wixstatic.com/media/5ef4ca_4f4204662a874ffab67ba2a416024c55~mv2.jpg/v1/fill/w_568,h_1004,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/5ef4ca_4f4204662a874ffab67ba2a416024c55~mv2.jpg', array['planter', 'wood', 'tall']
+    'Bird of Paradise Planter', 'Decor', 'Large bird-of-paradise plant in a ribbed cream oval pot. Tropical statement piece for patios.', '1.2m Height', 'Green / Cream Pot',
+    'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcS9L_bT75Wf0gMQdVlpdxGk0l6HG5qanpK5sy29o_MtYFtUWl4HBXgdXu6BjBszIOGEs0lNkbOj1jd9PtT0k9EZ8KCohgd2kSWgVwZ1EKaRWfU6HwAUWv0FOIG_pz6Ao87Ik6cP5K76&usqp=CAc', array['plant', 'tropical', 'planter', 'pot']
 ),
 (
-    'Rattan Garden Seating', 'Furniture', 'Comfortable grey wicker seating for relaxing in the yard.', 'Standard Set', 'Grey',
-    'https://www.coopersofstortford.co.uk/images/products/medium/XGB83i.jpg', array['furniture', 'seating', 'relax']
+    'Stone Flower Pot Set', 'Decor', 'Set of 3 stone-effect embossed grey pots with colorful seasonal flowers. Classic garden styling.', 'Small / Medium / Large', 'Stone Grey',
+    'https://www.coopersofstortford.co.uk/images/products/medium/XGB83i.jpg', array['pot', 'flower', 'stone', 'planter']
 ),
 (
-    'Citrus Tree (Hadar)', 'Plant', 'Fragrant evergreen tree with seasonal fruit.', '1.8m Height', 'Green',
-    'https://sunsun.co.il/wp-content/uploads/2025/08/%D7%94%D7%93%D7%A8.png', array['fruit', 'fragrant', 'citrus']
+    'Black Rattan Bistro Set', 'Furniture', '2-chair rattan bistro set with glass-top coffee table. Black weave with beige seat cushions.', '2 Chairs + Table', 'Black / Beige',
+    'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcQqq4PVAFWbhI38PSaVNny8Uxl4pacoq4SajUyzOpSBVRj_12dbZfiPp_Uy7i8am_gMO9iFoMZVHb0x62p40bLQ0hP83TgEmRzXuqFc6nI', array['rattan', 'bistro', 'chairs', 'furniture']
 ),
 (
-    'Shaped Olive Tree', 'Plant', 'Mediterranean olive tree with a professionally shaped trunk.', '2m Height', 'Silver-Green',
-    'https://sunsun.co.il/wp-content/uploads/2025/08/%D7%96%D7%99%D7%AA-%D7%9E%D7%A2%D7%95%D7%A6%D7%91.png', array['shaped', 'olive', 'luxury']
+    'Brown Rattan Bistro Set', 'Furniture', '2-chair rattan bistro set with glass-top coffee table. Brown weave with navy blue cushions.', '2 Chairs + Table', 'Brown / Navy',
+    'https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcSOdwbEubOUvBZwUgnPeRb5CseYQztrO11tzCVCdNrMtpyaKzj50Kdd3zNGKIRsXydnrR5liUHfb2G5my4CS8-M3G9q3WUgANnkuUN979xhbTN3USzuXqFsAg', array['rattan', 'bistro', 'chairs', 'furniture']
 ),
 (
-    'Pomegranate Tree', 'Plant', 'Ornamental and fruit-bearing tree with vibrant red flowers.', '1.5m Height', 'Green/Red',
-    'https://sunsun.co.il/wp-content/uploads/2025/08/%D7%A8%D7%99%D7%9E%D7%95%D7%9F.png', array['fruit', 'ornamental', 'pomegranate']
+    'Rattan Lounge Sofa Set', 'Furniture', 'Full rattan outdoor lounge set: loveseat, 2 armchairs, and glass-top coffee table. Black weave with cream cushions.', '5-Piece Set', 'Black / Cream',
+    'https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcTd-70slyr5nPpzfFVa8T3lfq6uOzHKXyHhZZjf5CeT3CVD09IltGt7i6YubNeN2WaY7h8MOJtoWX5GBmk1C5Iz_q7TfXSVvZ4Ox6G7cEtbLYgXQxxKh5LzeLg', array['rattan', 'sofa', 'lounge', 'furniture']
 ),
 (
-    'Luxury Outdoor Grill', 'Appliance', 'High-end stainless steel grill for outdoor kitchens.', 'Large', 'Chrome',
-    'https://www.payngo.co.il/cdn-cgi/image/format=auto,metadata=none,quality=90/media/New-Icons/Category-icons/N862t.png', array['grill', 'cooking', 'kitchen']
+    'Decorative Maple Tree', 'Plant', 'Tall decorative maple-style tree with green and red foliage in a white square planter pot.', '1.8m Height', 'Green / White Pot',
+    'https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcQi2P82qHSAeL-Z4a2mnmDCrA9ifFJN4AIk4xlvuyuJTDqfSwwNvk-CqjbUAzKtJmxLisjXipd9WHrTfXYaHWU1ikbA1vI63aki8i9BRsjP5DeN2NGjRFjKBlXY85BHVV-0Dy4GPA&usqp=CA', array['tree', 'maple', 'decorative', 'plant']
 ),
 (
-    'Designer Lounge Sofa', 'Furniture', 'Premium comfort with weather-resistant deep cushions.', '3-Seater', 'Cream',
-    'https://www.betili-shop.com/media/catalog/product/cache/cd5c75df12a522c856c0ce13fcf27ab6/1/0/104407.png', array['sofa', 'lounge', 'betili']
+    'Bird of Paradise (Large)', 'Plant', 'Extra-large bird-of-paradise plant in a tall ribbed cream pot. Bold tropical focal point.', '1.5m Height', 'Green / Cream Pot',
+    'https://www.betili-shop.com/media/catalog/product/cache/cd5c75df12a522c856c0ce13fcf27ab6/1/0/104407.png', array['plant', 'tropical', 'bird of paradise', 'pot']
 ),
 (
-    'Modern Patio Accent', 'Decor', 'Contemporary outdoor decorative piece.', 'Medium', 'Neutral',
-    'https://img.kwcdn.com/product/fancy/c8a143e4-d054-4201-84b8-3c1b7a5045ad.jpg?imageView2/2/w/800/q/70/format/avif', array['accent', 'decor', 'modern']
+    'White Garden Pergola', 'Structure', 'Large white vinyl pergola with open lattice roof. Provides shade and structure for outdoor dining areas.', '4m x 4m', 'White',
+    'https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcR0dcEC-lknDx4-bqdGgUX6D3fckZex1lmdEQkByuZ4F5rQLATxEy_jMvS_qOFdxIqpVIZOcO3DdWG5vKjjomY_haf2k9YBHQ', array['pergola', 'shade', 'structure', 'white']
 );

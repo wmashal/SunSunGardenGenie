@@ -39,6 +39,7 @@ class _ReviewPromptScreenState extends State<ReviewPromptScreen> {
           userPrompt: _promptController.text,
           isCreative: _isCreativeMode,
           capturedImageBytes: widget.capturedImageBytes,
+          yardArea: widget.calculatedArea,
         ),
       ),
     );

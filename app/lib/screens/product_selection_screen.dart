@@ -10,12 +10,14 @@ class ProductSelectionScreen extends StatefulWidget {
   final String userPrompt;
   final bool isCreative;
   final Uint8List capturedImageBytes;
+  final double yardArea;
 
   const ProductSelectionScreen({
     super.key,
     required this.userPrompt,
     required this.isCreative,
     required this.capturedImageBytes,
+    required this.yardArea,
   });
 
   @override
@@ -100,6 +102,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
       prompt: widget.userPrompt,
       selectedProducts: selectedProducts,
       isCreative: widget.isCreative,
+      yardArea: widget.yardArea,
     );
 
     if (!mounted) return;
@@ -111,9 +114,12 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => SimulationResultScreen(
-            imageUrls: result.imageUrls,
+            imageUrl: result.imageUrls.first,
             summary: result.summary,
             selectedProducts: selectedProducts,
+            originalPrompt: widget.userPrompt,
+            imageBytes: widget.capturedImageBytes,
+            yardArea: widget.yardArea,
           ),
         ),
       );
@@ -282,18 +288,15 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
             // Product image
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                product.thumbnailUrl ?? '',
-                width: 70,
-                height: 70,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 70,
-                  height: 70,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.local_florist, color: AppColors.accent),
-                ),
-              ),
+              child: product.thumbnailUrl != null
+                  ? Image.network(
+                      ApiConfig.proxyImageUrl(product.thumbnailUrl!),
+                      width: 70,
+                      height: 70,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _thumbPlaceholder(),
+                    )
+                  : _thumbPlaceholder(),
             ),
             const SizedBox(width: 15),
 
@@ -345,6 +348,13 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
     );
   }
 
+  Widget _thumbPlaceholder() => Container(
+        width: 70,
+        height: 70,
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.local_florist, color: AppColors.accent),
+      );
+
   Widget _buildGenerateButton() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -389,7 +399,7 @@ class _ProductSelectionScreenState extends State<ProductSelectionScreen> {
                 : Text(
                     _selectedProductIds.isEmpty
                         ? 'Select products to continue'
-                        : 'Generate 3 Variations (${_selectedProductIds.length})',
+                        : 'Generate Design (${_selectedProductIds.length} products)',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,

@@ -13,5 +13,9 @@ class ApiConfig {
   // For physical device, use your computer's IP address
   static const String baseUrl = 'http://10.0.2.2:8000';
 
+  static String get productsUrl => '$baseUrl/products';
   static String get generateDesignUrl => '$baseUrl/generate-design';
+  static String get regenerateDesignUrl => '$baseUrl/regenerate-with-suggestion';
+  static String proxyImageUrl(String imageUrl) =>
+      '$baseUrl/proxy-image?url=${Uri.encodeComponent(imageUrl)}';
 }

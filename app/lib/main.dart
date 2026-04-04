@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/ar_camera_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'http://10.0.2.2:54321'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
-  );
-
   runApp(const SunSunGardenApp());
 }
 
